@@ -1,0 +1,49 @@
+version: '3'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.8
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+  postgres:
+    image: postgres:13.0
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+  email_service:
+    build:
+      context: ./email_service
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      - rabbitmq
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+      RABBITMQ_EMAIL_QUEUE: ${RABBITMQ_EMAIL_ROUTING_KEY}
+      RABBITMQ_EMAIL_ROUTING_KEY: ${RABBITMQ_EMAIL_ROUTING_KEY}
+  auth_service:
+    build:
+      context: ./auth_project
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      - postgres
+      - email_service
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+      RABBITMQ_EMAIL_QUEUE: ${RABBITMQ_EMAIL_ROUTING_KEY}
+      RABBITMQ_EMAIL_ROUTING_KEY: ${RABBITMQ_EMAIL_ROUTING_KEY}
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE}
+    ports:
+      - "127:0.0.1:8000:8000"
